@@ -1,0 +1,76 @@
+#!/bin/bash
+
+syntax() {
+  echo "Syntax: ct-cli name <command> <parameter>"
+  echo "   name                 CoolTerm window name"
+  echo "   -c|--connect         Connect named window"
+  echo "   -d|--disconnect      Disconnect named window"
+  echo "   -b|--baudrate <rate> Set window's baur rate"
+  echo "   -p|--port <usb-port> Set window's usb port"
+  echo "   -r|--reset           Clean window"
+  echo "   -s|--scan            Rescan serial ports"
+  echo "   -h|--help            This message"
+  exit 0
+}
+
+if [ $# -lt 2 ]
+then
+  syntax
+fi
+
+call() {
+  CMD=$1
+  DATA=$2
+  RESULT=`curl --silent "$HOST/" --data-raw "WINID=$WINID&DATA=$DATA&CMD=$CMD"`
+  echo `echo $RESULT | sed 's/.*<i>//g' | sed s/\<.*$//g`
+}
+
+HOST=http://localhost:51412
+WINDOW=$1
+WINID=$(call WindowIDfromName $1.stc)
+shift
+
+echo "CoolTerm:"
+while [[ $# -gt 0 ]]
+do
+  key="$1"
+  shift
+  case $key in
+    -c|--connect)
+      echo " - Connecting $WINDOW: $(call Connect)"
+      ;;
+
+    -d|--disconnect)
+      echo " - Disconnecting $WINDOW: $(call Disconnect)"
+      ;;
+
+    -b|--baudrate)
+      reuslt=`$(call SetParameter "BaudRate $1")`
+      echo " - Setting baudrate for $WINDOW to $1: $result"
+      shift
+      ;;
+
+    -p|--port)
+      port=`echo $1 | sed 's/\/dev\/cu\.//g'` 
+      result=`$(call SetParameter "Port $port")`
+      echo " - Setting port for $WINDOW to $port: $result" 
+      shift
+      ;;
+
+    -s|--scan)
+      echo " - Rescanning serial ports for $WINDOW $(call RescanSerialPorts)"
+      ;;
+
+    -r|--reset)
+      echo " - Clearing buffer for $WINDOW: $(call ClearBuffer)"
+      ;;
+
+    -h|--help)
+      syntax
+      ;;
+
+    *)
+      echo " - Unknown command: $key"
+      ;;
+  esac
+done
